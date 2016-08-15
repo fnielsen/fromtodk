@@ -1,4 +1,5 @@
 docopt
 Flask
 geopy
+gunicorn
 requests
