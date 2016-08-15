@@ -3,5 +3,5 @@ Flask
 geopy
 gunicorn
 requests
-sparql
+sparql-client
 
