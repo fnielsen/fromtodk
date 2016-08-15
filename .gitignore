@@ -89,6 +89,4 @@ ENV/
 .ropeproject
 
 # Emacs backup files.
-*.py~
-*.ini~
-*.txt~
+*~
