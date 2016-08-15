@@ -1,0 +1,4 @@
+docopt
+Flask
+geopy
+requests
