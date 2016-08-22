@@ -1,4 +1,11 @@
-"""Wikidata."""
+"""Wikidata.
+
+Description
+-----------
+This module implements several interfaces for querying Wikidata wrt.
+geographical coordinates.
+
+"""
 
 import re
 
@@ -17,7 +24,7 @@ select ?latitude ?longitude where {{
   ?coordinate_statement psv:P625 ?coordinate_node .
   ?coordinate_node wikibase:geoLatitude ?latitude .
   ?coordinate_node wikibase:geoLongitude ?longitude .
-}}  
+}}
 """
 
 
@@ -88,7 +95,77 @@ def is_wikidata_qid(qid):
     return False
 
 
-def get_wdqs_coordinates(qid):
+def get_coordinates_from_api_from_qids(qids):
+    """Get geocoordinates from Q-identifiers via Wikidata API.
+
+    Query Wikidata API for geocoordinates. P625 and P159/P625 is used.
+
+    Parameters
+    ----------
+    qids : list of str
+        List of strings, each with a Q-identifier for a Wikidata item.
+
+    Returns
+    -------
+    coordinates : list of tuples with latitude, longitude
+
+    Examples
+    --------
+    >>> coords = get_coordinates_from_api_from_qids(['Q818846', 'Q12325240'])
+    >>> round(coords[0][0])
+    56.0
+
+    """
+    url = "https://www.wikidata.org/w/api.php"
+    params = {
+        'action': 'wbgetentities',
+        'ids': "|".join(qids),
+        'languages': 'en',
+        'props': 'claims',
+        'format': 'json',
+    }
+    headers = {'User-agent': USER_AGENT}
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+
+    # Iterate over items
+    coordinates = []
+    for qid, content in data['entities'].items():
+        claims = content['claims']
+        if 'P625' in claims:
+            # Geolocation as ordinary property
+            value = claims['P625'][0]['mainsnak']['datavalue']['value']
+            coordinate = value['latitude'], value['longitude']
+        elif ('P159' in claims and 'qualifiers' in claims['P159'][0] and
+              'P625' in claims['P159'][0]['qualifiers']):
+            # Headquarter with geolocation
+            value = claims['P159'][0]['qualifiers']['P625'][0]['datavalue'][
+                'value']
+            coordinate = value['latitude'], value['longitude']
+        else:
+            # No geolocation for item
+            coordinate = (None, None)
+        coordinates.append(coordinate)
+
+    return coordinates
+
+
+def get_coordinates_from_wdqs_from_qid(qid):
+    """Get geocoordiantes from Q-identifier via WDQS.
+
+    Parameters
+    ----------
+    qid : str
+        String with Q-identifier for Wikidata item
+
+    Returns
+    -------
+    latitude : float or None
+       Latitude, None if not found.
+    longitude : float or None
+       Longitude, None if not found.
+
+    """
     query = SPARQL_COORDINATES_PATTERN.format(qid)
     service = sparql.Service('https://query.wikidata.org/sparql',
                              method='GET')
@@ -104,13 +181,13 @@ def get_wdqs_coordinates(qid):
 
 def get_coordinates_from_qid(qid):
     """Get coordinates from a Wikidata item.
-    
+
     None is returned if a coordinate is not found.
 
     Parameters
     ----------
     qid : str
-        String it Q-identifier
+        String with Q-identifier
 
     Returns
     -------
@@ -121,12 +198,37 @@ def get_coordinates_from_qid(qid):
 
     Examples
     --------
-    >>> lat, long = get_coordinates('Q1748')   # Kongens Lyngby
+    >>> lat, long = get_coordinates_from_qid('Q1748')   # Kongens Lyngby
     >>> round(lat), round(long)
     (56.0, 13.0)
 
     """
-    return get_wdqs_coordinates(qid)
+    return get_coordinates_from_api_from_qids([qid])[0]
+
+
+def get_coordinates_from_qids(qids):
+    """Get coordinates from Wikidata items.
+
+    None is returned if a coordinate is not found.
+
+    Parameters
+    ----------
+    qids : list of str
+        List of strings with Q-identifiers
+
+    Returns
+    -------
+    coordinates : list of two-tuples with float
+        List with coordinates
+
+    Examples
+    --------
+    >>> coords = get_coordinates_from_qids(['Q1748'])   # Kongens Lyngby
+    >>> round(coords[0][0])
+    56.0
+
+    """
+    return get_coordinates_from_api_from_qids(qids)
 
 
 def get_distance_from_qids(from_qid, to_qid):
@@ -142,18 +244,19 @@ def get_distance_from_qids(from_qid, to_qid):
     Returns
     -------
     distance : float or None
-        Distance in kilometer. None is returned if 
+        Distance in kilometer. None is returned if geocoordinates
+        are not found.
 
     Examples
     --------
     >>> distance = get_distance('Q1748', 'Q2239')
-    >>>
 
     """
-    from_lat, from_long = get_coordinates_from_qid(from_qid)
-    to_lat, to_long = get_coordinates_from_qid(to_qid)
+    coordinates = get_coordinates_from_qids([from_qid, to_qid])
+    from_lat, from_long = coordinates[0]
+    to_lat, to_long = coordinates[1]
     if (from_lat is None or from_long is None or to_lat is None or
-        to_long is None):
+            to_long is None):
         return None
     distance = vincenty((from_lat, from_long), (to_lat, to_long))
     distance_in_km = distance.km
