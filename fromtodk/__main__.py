@@ -16,8 +16,6 @@ Examples:
 from __future__ import division, print_function
 
 import sys
-reload(sys)
-sys.setdefaultencoding("utf-8")
 
 from docopt import docopt
 
@@ -27,17 +25,20 @@ from .wikidata import search_wikidata_entities, get_distance_from_qids
 def main():
     """Handel command-line interface."""
 
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
+
     args = docopt(__doc__)
 
     verbose = args['--verbose']
-    
+
     from_qids = search_wikidata_entities(args['<from>'])
     if verbose:
         print(from_qids)
     to_qids = search_wikidata_entities(args['<to>'])
     if verbose:
         print(to_qids)
-    
+
     distance = get_distance_from_qids(from_qids[0], to_qids[0])
     if distance:
         print(distance)
