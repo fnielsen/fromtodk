@@ -2,30 +2,9 @@
 
 from __future__ import absolute_import
 
-from flask import Flask, request
+from flask import Flask, request, render_template
 
 from .wikidata import search_wikidata_entities, get_distance_from_qids
-
-
-HTML_TEMPLATE = """
-<html>
-  <body>
-    <form>
-      <input name="f">
-      <input name="t">
-      <input type=submit>
-    </form>
-    <div>
-      Distance: {}
-    </div>
-    <div>
-      <a href="https://github.com/fnielsen/fromtodk"
-          >https://github.com/fnielsen/fromtodk</a>
-    </div>
-
-  </body>
-</html>
-"""
 
 
 app = Flask(__name__)
@@ -42,4 +21,4 @@ def index():
         distance = get_distance_from_qids(from_qids[0], to_qids[0])
     else:
         distance = None
-    return HTML_TEMPLATE.format(distance)
+    return render_template("index.html", f=from_, t=to, distance=distance)
