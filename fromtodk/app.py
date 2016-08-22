@@ -16,10 +16,11 @@ HTML_TEMPLATE = """
       <input type=submit>
     </form>
     <div>
-      Distance: {} 
+      Distance: {}
     </div>
     <div>
-      <a href="https://github.com/fnielsen/fromtodk">https://github.com/fnielsen/fromtodk</a>
+      <a href="https://github.com/fnielsen/fromtodk"
+          >https://github.com/fnielsen/fromtodk</a>
     </div>
 
   </body>
@@ -42,5 +43,3 @@ def index():
     else:
         distance = None
     return HTML_TEMPLATE.format(distance)
-
-
